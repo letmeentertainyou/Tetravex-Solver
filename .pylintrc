@@ -1,0 +1,13 @@
+[MESSAGES CONTROL]
+
+disable=C0103,C0115,C0116
+
+# C0103 | invalid-name
+# I use a lot of single letter names in this script to keep lines short.
+
+# C0115 | missing-class-docstring
+# C0116 | missing-function-docstring
+# These functions are detailed in docs/API.txt. Doc strings make my files very long so
+# I'm experimenting with a different format for this project.
+
+

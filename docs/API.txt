@@ -1,0 +1,201 @@
+This document contains all the globals, classes, functions and their apis tetravex.py.
+
+My original attempt to solve this puzzle was using itertools.permutations() on a Flat version
+of the shuffled puzzle, and then checking every single permutation to see if it is solved.
+
+This trick can solve the 3x3 in a matter of seconds but it's much slower on the 4x4 because 
+16 factorial is a big number.
+
+The next attempt is still essentially brute force but I narrowed down how the permutations are
+found, and that cleaned up the scope quite a bit. Solving for 6x6 can be 4-20 seconds, but solving
+7x7 can take significantly longer depending on the state of the shuffled puzzle.
+
+
+*IMPORTS*
+
+
+I strive to use python builtins with my projects so that no external code is required. These 
+imports will be explained further in the pieces of code that use them, they should be fairly
+self explanatory because they have very clean names.
+
+dataclasses
+    dataclass
+
+math
+    floor, sqrt
+
+random
+    choice, shuffle
+
+sys
+    argv
+
+typing
+    Dict, List, Tuple
+
+
+*CLASSES*
+
+
+Tetra()
+    The Tetra class represents the four sides of a Tetravex tile as integers, and also has some
+    useful methods/properties for manipulating the Tetravex tile. Tetra is a dataclass so it
+    doesn't have an __init__ method.
+
+    *PROPERTIES*
+
+        top: int
+        left: int
+        right: int
+        bottom: int
+
+            These four above integers represent the four faces of a Tetravex tile.
+        
+        top_row: str
+        mid_row: str
+        bot_row: str
+
+            The above three properties are used for printing a Tetra tile to the screen in
+            a human readable way.
+
+
+    *METHODS*
+
+        __repr__(self) -> str
+            This method is useful for debugging, it gives the four integers of the tetra along
+            with a letter denoting which side they belong to.
+    
+        __str__(self) -> str
+            Returns the four Tetra values as a string separated by spaces, this is used for writing
+            Tetras and tuples of Tetras to a file.
+    
+        t_print(self) -> None
+            This method exists for debugging only but is not actually used anywhere in project. in
+            theory iy could be nice to print a single Tetra to the console but in practice I only
+            print whole puzzles at a time.
+
+*GLOBALS*
+
+    *Type Aliases*
+
+        Flat = Tuple[Tetra]
+            Flat is a one dimensional tuple of Tetras, this is how most data in tetravex.py
+            appears, as it works well for shuffling and solving Tetravex puzzles.
+
+        Table = Tuple[Flat]
+            Table is a two dimensional tuple of Tetras, which is used for displaying puzzle
+            states/solutions to humans in the terminal.
+
+        TupIntTetra = Tuple[int, Tetra]
+            This contains a Tetra and it's index inside a flat, this is used for generating 
+            solutions to the puzzle and will be detailed in the get_all_adjacent() function below.
+
+
+*FUNCTIONS*
+
+
+generate_tetras(size=4) -> Table
+    Builds a random solved puzzle state in the form of a Table. Starting from the top left corner
+    this function generates random Tetra tiles, making sure that any new Tetra has matching numbers
+    with the Tetra's that it touches. 
+
+
+print_table(table: Table) -> None
+    This takes a two dimensional Table of Tetras and prints it out to the console one row at a time. 
+    
+    Each Tetras has a top, middle, and bottom and this function deals with the logic to combine the
+    tops, middles and bottoms from a whole row of tetras, then print them, then do the same for
+    the next row of the Table.
+
+
+flatten(table: Table) -> Flat
+    Deep copies a two dimensional Table object into a one dimensional Flat object.
+
+
+fatten(flat: Flat) -> Table
+    Deep copies a one dimensional Flat object into a two dimensional Table object. The fatten
+    function uses math.sqrt and math.floor to calculate what size the output two dimensional array
+    will be. This means that the user never needs to tell tetravex.py what size their table is. it's
+    a nice convenance.
+
+
+is_solved(table: Table) -> bool
+    A very simple solve checker that bails on the first failed connection! I could write a faster
+    algorithm for this solve checker but I decided to use it very rarely in the main solving
+    algorithms instead. This achieves a dramatic speedup for very little effort.
+
+
+shuffle_table(table: Table) -> Table
+    This function returns a shuffled deep copy of a Table object. First it flattens the given Table
+    into a Flat object which is easier to shuffle. Then after shuffling that object is turned back
+    a Table and returned.
+
+
+dump_table_to_file(table: Table, filename: str) -> None
+    Writes a table to the file. First the table is flattened, then each Tetra the str() for each
+    Tetra in the Flat is written on a separate line of the file. The digits of each line are
+    separated by spaces so that the str.split(" ") method can be called when loading the file.
+    
+    If you want to use this solver on a Tetravex puzzle that was generated elsewhere it will
+    need to match the described format. Four digits separated by spaces in the order top, left,
+    right and bottom, per line.
+
+
+load_table_from_file(filename: str) -> Table
+    Reads a table from a file if it's formatted as digits separated by new lines.
+
+
+swap(array: Tuple, x: int, y: int) -> Tuple
+    Swaps two items in an array. Useful for something somewhere. This is required because all the
+    data types in this project are immutable tuples so we need to convert our input into a list,
+    then perform the swap and then return a Tuple again.
+
+    This function could be renamed to tuple_swap.
+
+
+get_all_adjacent(flat: Flat) -> Tuple[Dict, Dict]:
+    all_tops: Dict[int, Tuple[int, Tetra]]
+    all_lefts: Dict[int, Tuple[int, Tetra]]
+
+    This function takes a board state as a Flat object, then finds all of the tops for each Tetra
+    in the object and puts them into and their index into a dictionary where the key is their value.
+    Then it does the same for all of the lefts. Then all_tops, all_lefts are returned as a tuple.
+    
+
+elegant_solver(table: Table) -> Tuple
+    Calculates all of the permutations that can possibly be a solved puzzle state. The second
+    there are no more valid pieces this function backtracks to the last place where there were
+    more valid pieces. A valid piece is a Tetra who's left value matches the right of any piece
+    to it's left, and who's top value matches the bottom value of any piece above it. That sounds
+    a bit convoluted because it is but it does cover all of the literal edge cases in this problem.
+
+    *** SUB FUNCTIONS ***
+
+        r(current_flat: Flat, index: int = 1) -> [bool, Flat]
+            The name r just stands for recursive inner function here, I could give it a longer name
+            but it's not really part of the public facing API. This function does most of the work
+            described above. It gets called once per each possible starting Tetra until a solution is
+            found.
+
+
+shuffle_and_write(size: int, filename="")
+    Generates a solved Table then shuffles it and writes both versions of it to a file. This is
+    mostly used for generating benchmarks but I made it more generic so any users can input a 
+    custom output filename. If you can shuffle_and_write(size=x) then a filename will be 
+    "benchmarks/sizexsize".
+
+    This function creates .solved and .shuffled files so that you can always compare the original
+    solution to your shuffled state. This is great if you want to implement a playable version of
+    Tetravex in python.
+
+
+benchmark(size=0) -> None:
+    This is for testing the speed of my algorithm. If you run tetravex.py with the -b flag this
+    function is triggered. The size specified refers to the name of the file you are benchmarking
+    and that is the only reason the size variable is needed. This could take a filepath instead but
+    that would require more effort every time you call this function.
+
+
+main(filename="") -> None:
+    If the given filename points to a file containing a Tetravex puzzle, this function solves it,
+    There is no error handling for invalid files atm. I will add that soon.

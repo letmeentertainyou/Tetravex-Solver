@@ -1,0 +1,6 @@
+add .gitignore  DONE
+run pylint      DONE
+run mypy        DONE
+finish API.txt  DONE
+rewrite readme
+implement future algorithm changes
